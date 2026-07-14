@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+pycocotools/_mask*.so
+models/*.pkl
+models/*.pth
+datasets/
