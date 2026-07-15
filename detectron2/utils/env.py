@@ -80,6 +80,21 @@ def _configure_libraries():
     PIL.Image.BICUBIC = PIL.Image.Resampling.BICUBIC
     PIL.Image.LINEAR = PIL.Image.Resampling.BILINEAR
 
+    # Similarly, some torchvision versions' `torchvision/utils.py` imports
+    # PIL.ImageFont, which itself does `from ._util import is_directory,
+    # is_path` -- but newer Pillow removed `is_directory` from PIL._util
+    # (only `is_path` remains). Restore it so `import torchvision` (triggered
+    # transitively by detectron2/layers/deform_conv.py) doesn't ImportError.
+    import PIL._util
+
+    if not hasattr(PIL._util, "is_directory"):
+        import os as _os
+
+        def _is_directory(f):
+            return isinstance(f, str) and _os.path.isdir(f)
+
+        PIL._util.is_directory = _is_directory
+
     # An environment option to disable `import cv2` globally,
     # in case it leads to negative performance impact
     disable_cv2 = int(os.environ.get("DETECTRON2_DISABLE_CV2", False))

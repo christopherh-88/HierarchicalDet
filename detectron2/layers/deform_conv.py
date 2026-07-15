@@ -2,6 +2,22 @@
 import math
 from functools import lru_cache
 import torch
+
+# Redundant with the patch in detectron2/utils/env.py's _configure_libraries()
+# -- some torchvision versions' `torchvision/utils.py` imports PIL.ImageFont,
+# which needs PIL._util.is_directory, removed in newer Pillow. Applied again
+# directly here, right before the `torchvision.ops` import below that
+# transitively triggers it, independent of whether the central patch ran.
+import PIL._util
+
+if not hasattr(PIL._util, "is_directory"):
+    import os as _os
+
+    def _is_directory(f):
+        return isinstance(f, str) and _os.path.isdir(f)
+
+    PIL._util.is_directory = _is_directory
+
 from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
