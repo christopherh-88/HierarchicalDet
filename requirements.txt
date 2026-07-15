@@ -18,4 +18,3 @@ termcolor
 pyyaml
 pycocotools
 fairscale
-pillow<10
