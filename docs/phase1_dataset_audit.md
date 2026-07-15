@@ -78,7 +78,7 @@ All 5 checked out: boxes match visible teeth/pathology, and the quadrant→tooth
 ## What's NOT done here (explicitly out of scope for Phase 1)
 
 - No LabelMe→COCO conversion for the test set — needed before test-set evaluation is possible at all (Phase 2 prerequisite).
-- No patch to make `quadrant`/`quadrant_enumeration` loadable by the official pipeline — needed before tier-0/tier-1 training is possible (Phase 2 prerequisite).
+- ~~No patch to make `quadrant`/`quadrant_enumeration` loadable by the official pipeline~~ — **fixed in Phase 2**, see `docs/phase2_dataloader_fix.md`.
 - The train/test image-overlap question above is reported, not resolved — needs a decision informed by the paper's actual methodology text.
 
 ## Reproducibility
