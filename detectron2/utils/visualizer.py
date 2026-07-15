@@ -2,6 +2,7 @@
 import colorsys
 import logging
 import math
+import os
 import numpy as np
 from enum import Enum, unique
 import cv2
@@ -423,22 +424,38 @@ class Visualizer:
         classes2 = predictions.pred_classes_2.tolist() if predictions.has("pred_classes_2") else None
         classes3 = predictions.pred_classes_3.tolist() if predictions.has("pred_classes_3") else None
         
-        coco_api = COCO("datasets/custom_triple/validation.json")
-        cat_ids_1 = sorted(coco_api.getCatIds()[0])
-        cat_ids_2 = sorted(coco_api.getCatIds()[1])
-        cat_ids_3 = sorted(coco_api.getCatIds()[2])
-        
-        cats_1 = coco_api.loadCats(cat_ids_1,0)
-        cats_2 = coco_api.loadCats(cat_ids_2,1)
-        cats_3 = coco_api.loadCats(cat_ids_3,2)
-        # The categories in a custom json file may not be sorted.
-        thing_classes1 = [c["name"] for c in sorted(cats_1, key=lambda x: x["id"])]
-        thing_classes2 = [c["name"] for c in sorted(cats_2, key=lambda x: x["id"])]
-        thing_classes3 = [c["name"] for c in sorted(cats_3, key=lambda x: x["id"])]
-        
-        self.metadata.thing_classes1 = thing_classes1
-        self.metadata.thing_classes2 = thing_classes2
-        self.metadata.thing_classes3 = thing_classes3
+        # Originally hardcoded to "datasets/custom_triple/validation.json", a
+        # path specific to the original authors' machine and not part of the
+        # public release. Made configurable (DENTEX_CATEGORY_JSON) with a
+        # graceful fallback to numeric class-index labels when no 3-tier
+        # category JSON (categories_1/2/3, e.g. validation_triple.json) is
+        # available, instead of crashing draw_instance_predictions outright.
+        category_json_path = os.environ.get(
+            "DENTEX_CATEGORY_JSON", "datasets/custom_triple/validation.json"
+        )
+        if os.path.exists(category_json_path):
+            coco_api = COCO(category_json_path)
+            cat_ids_1 = sorted(coco_api.getCatIds()[0])
+            cat_ids_2 = sorted(coco_api.getCatIds()[1])
+            cat_ids_3 = sorted(coco_api.getCatIds()[2])
+
+            cats_1 = coco_api.loadCats(cat_ids_1, 0)
+            cats_2 = coco_api.loadCats(cat_ids_2, 1)
+            cats_3 = coco_api.loadCats(cat_ids_3, 2)
+            # The categories in a custom json file may not be sorted.
+            thing_classes1 = [c["name"] for c in sorted(cats_1, key=lambda x: x["id"])]
+            thing_classes2 = [c["name"] for c in sorted(cats_2, key=lambda x: x["id"])]
+            thing_classes3 = [c["name"] for c in sorted(cats_3, key=lambda x: x["id"])]
+
+            self.metadata.thing_classes1 = thing_classes1
+            self.metadata.thing_classes2 = thing_classes2
+            self.metadata.thing_classes3 = thing_classes3
+        else:
+            logging.getLogger(__name__).warning(
+                "DENTEX_CATEGORY_JSON not set and %s not found -- labeling "
+                "predictions with raw class indices instead of category names.",
+                category_json_path,
+            )
         
         
         
