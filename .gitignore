@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
+.ipynb_checkpoints/
 pycocotools/_mask*.so
 models/*.pkl
 models/*.pth

@@ -2,31 +2,30 @@
 import math
 from functools import lru_cache
 import torch
-
-# Redundant with the patch in detectron2/utils/env.py's _configure_libraries()
-# -- some torchvision versions' `torchvision/utils.py` imports PIL.ImageFont,
-# which needs PIL._util.is_directory, removed in newer Pillow. Applied again
-# directly here, right before the `torchvision.ops` import below that
-# transitively triggers it, independent of whether the central patch ran.
-import PIL._util
-
-if not hasattr(PIL._util, "is_directory"):
-    import os as _os
-
-    def _is_directory(f):
-        return isinstance(f, str) and _os.path.isdir(f)
-
-    PIL._util.is_directory = _is_directory
-
 from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
-from torchvision.ops import deform_conv2d
 
 from detectron2.utils.develop import create_dummy_class, create_dummy_func
 
 from .wrappers import _NewEmptyTensorOp
+
+# This model (Swin-based DiffusionDet) never actually uses deformable
+# convolution -- it's only relevant for certain ResNet-DCN variants. The
+# torchvision.ops import has repeatedly broken on hosted notebook
+# environments due to unrelated Pillow-internal API changes in torchvision's
+# own eagerly-imported __init__ chain (torchvision/utils.py -> PIL.ImageFont
+# -> PIL._util.is_directory, removed in newer Pillow), and there's no reason
+# to keep chasing every future such break for a feature we don't use. Make
+# the import optional, matching the existing pattern just below for
+# detectron2._C: deform_conv2d is only ever referenced inside
+# _DeformConv.forward()'s CPU branch, so a None fallback is safe as long as
+# that code path is never actually exercised.
+try:
+    from torchvision.ops import deform_conv2d
+except ImportError:
+    deform_conv2d = None
 
 
 class _DeformConv(Function):
@@ -67,6 +66,12 @@ class _DeformConv(Function):
             if deformable_groups != 1:
                 raise NotImplementedError(
                     "Deformable Conv with deformable_groups != 1 is not supported on CPUs!"
+                )
+            if deform_conv2d is None:
+                raise ImportError(
+                    "torchvision.ops.deform_conv2d could not be imported in this "
+                    "environment (see detectron2/layers/deform_conv.py), so CPU "
+                    "deformable convolution is unavailable."
                 )
             return deform_conv2d(
                 input, offset, weight, stride=stride, padding=padding, dilation=dilation
