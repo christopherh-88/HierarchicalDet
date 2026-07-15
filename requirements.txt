@@ -18,3 +18,4 @@ termcolor
 pyyaml
 pycocotools
 fairscale
+tensorboard
